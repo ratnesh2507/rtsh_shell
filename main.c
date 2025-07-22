@@ -35,16 +35,35 @@ int rtsh_num_builtins()
 */
 int rtsh_cd(char **args)
 {
-  if (args[1] == NULL)
+  const char *path = args[1];
+  char *home = getenv("HOME");
+
+  if (path == NULL || strcmp(path, "~") == 0)
   {
-    fprintf(stderr, "rtsh: expected argument to \"cd\"\n");
+    path = home;
+  }
+  else if (strcmp(path, "-") == 0)
+  {
+    path = getenv("OLDPWD");
+    if (path)
+      printf("%s\n", path);
+  }
+
+  if (path == NULL)
+  {
+    fprintf(stderr, "rtsh: cd: path not found\n");
+    return 1;
+  }
+
+  char cwd[1024];
+  getcwd(cwd, sizeof(cwd));
+  if (chdir(path) != 0)
+  {
+    perror("rtsh");
   }
   else
   {
-    if (chdir(args[1]) != 0)
-    {
-      perror("rtsh");
-    }
+    setenv("OLDPWD", cwd, 1);
   }
   return 1;
 }
