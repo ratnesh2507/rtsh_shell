@@ -4,6 +4,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
+
+#define HISTORY_SIZE 100
+#define RTSH_RL_BUFFER_SIZE 1024
+#define RTSH_TOK_BUFSIZE 64
+#define RTSH_TOK_DELIM " \t\r\n\a"
 
 /*
   Function Declarations for builtin shell commands:
@@ -11,6 +17,9 @@
 int rtsh_cd(char **args);
 int rtsh_help(char **args);
 int rtsh_exit(char **args);
+int rtsh_pwd(char **args);
+int rtsh_clear(char **args);
+int rtsh_history(char **args);
 
 /*
   List of builtin commands, followed by their corresponding functions.
@@ -19,17 +28,35 @@ char *builtin_str[] = {
     "cd",
     "help",
     "exit",
-    "pwd"};
+    "pwd",
+    "clear",
+    "history"};
 
 int (*builtin_func[])(char **) = {
     &rtsh_cd,
     &rtsh_help,
     &rtsh_exit,
-    &rtsh_pwd};
+    &rtsh_pwd,
+    &rtsh_clear,
+    &rtsh_history};
 
 int rtsh_num_builtins()
 {
   return sizeof(builtin_str) / sizeof(char *);
+}
+
+/*
+  Command history support
+ */
+char *history[HISTORY_SIZE];
+int history_count = 0;
+
+void save_history(char *line)
+{
+  if (history_count < HISTORY_SIZE)
+  {
+    history[history_count++] = strdup(line);
+  }
 }
 
 /*
@@ -72,13 +99,15 @@ int rtsh_cd(char **args)
 
 int rtsh_help(char **args)
 {
+  int i;
   printf("BVK Ratnesh's rtsh - Custom Shell\n\n");
   printf("Built-in Commands:\n");
   printf("  cd [dir]   - Change the current directory\n");
   printf("  help       - Show this help menu\n");
   printf("  exit       - Exit the shell\n");
   printf("  pwd        - Print current working directory\n");
-  printf("\nUse the 'man' command for other utilities.\n");
+  printf("  clear      - Clear the terminal\n");
+  printf("  history    - Show command history\n");
   return 1;
 }
 
@@ -94,6 +123,19 @@ int rtsh_pwd(char **args)
     printf("%s\n", cwd);
   else
     perror("rtsh");
+  return 1;
+}
+
+int rtsh_clear(char **args)
+{
+  printf("\033[H\033[J");
+  return 1;
+}
+
+int rtsh_history(char **args)
+{
+  for (int i = 0; i < history_count; i++)
+    printf("%d  %s\n", i + 1, history[i]);
   return 1;
 }
 
@@ -152,24 +194,6 @@ int rtsh_execute(char **args)
 
 char *rtsh_read_line(void)
 {
-#ifdef RTSH_USE_STD_GETLINE
-  char *line = NULL;
-  ssize_t bufsize = 0; // have getline allocate a buffer for us
-  if (getline(&line, &bufsize, stdin) == -1)
-  {
-    if (feof(stdin))
-    {
-      exit(EXIT_SUCCESS); // We received an EOF
-    }
-    else
-    {
-      perror("rtsh: getline\n");
-      exit(EXIT_FAILURE);
-    }
-  }
-  return line;
-#else
-#define RTSH_RL_BUFFER_SIZE 1024
   int bufferSize = RTSH_RL_BUFFER_SIZE;
   int pos = 0;
   char *buffer = malloc(sizeof(char) * bufferSize);
@@ -213,11 +237,8 @@ char *rtsh_read_line(void)
       }
     }
   }
-#endif
 }
 
-#define RTSH_TOK_BUFSIZE 64
-#define RTSH_TOK_DELIM " \t\r\n\a"
 char **rtsh_split_line(char *line)
 {
   int bufsize = RTSH_TOK_BUFSIZE, position = 0;
@@ -253,6 +274,14 @@ char **rtsh_split_line(char *line)
   return tokens;
 }
 
+void rtsh_prompt()
+{
+  char cwd[1024];
+  getcwd(cwd, sizeof(cwd));
+  char *user = getenv("USER");
+  printf("%s@rtsh:%s$ ", user ? user : "user", cwd);
+}
+
 void rtsh_loop(void)
 {
   char *line;
@@ -261,8 +290,9 @@ void rtsh_loop(void)
 
   do
   {
-    printf("> ");
+    rtsh_prompt();
     line = rtsh_read_line();
+    save_history(line);
     args = rtsh_split_line(line);
     status = rtsh_execute(args);
 
