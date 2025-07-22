@@ -8,9 +8,9 @@
 /*
   Function Declarations for builtin shell commands:
  */
-int lsh_cd(char **args);
-int lsh_help(char **args);
-int lsh_exit(char **args);
+int rtsh_cd(char **args);
+int rtsh_help(char **args);
+int rtsh_exit(char **args);
 
 /*
   List of builtin commands, followed by their corresponding functions.
@@ -102,6 +102,27 @@ int rtsh_launch(char **args)
   return 1;
 }
 
+int rtsh_execute(char **args)
+{
+  int i;
+
+  if (args[0] == NULL)
+  {
+    // An empty command was entered.
+    return 1;
+  }
+
+  for (i = 0; i < rtsh_num_builtins(); i++)
+  {
+    if (strcmp(args[0], builtin_str[i]) == 0)
+    {
+      return (*builtin_func[i])(args);
+    }
+  }
+
+  return rtsh_launch(args);
+}
+
 char *rtsh_read_line(void)
 {
 #ifdef RTSH_USE_STD_GETLINE
@@ -160,7 +181,7 @@ char *rtsh_read_line(void)
       buffer = realloc(buffer, bufferSize);
       if (!buffer)
       {
-        fprintf(stderr, "lsh: allocation error\n");
+        fprintf(stderr, "rtsh: allocation error\n");
         exit(EXIT_FAILURE);
       }
     }
