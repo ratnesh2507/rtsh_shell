@@ -18,12 +18,14 @@ int rtsh_exit(char **args);
 char *builtin_str[] = {
     "cd",
     "help",
-    "exit"};
+    "exit",
+    "pwd"};
 
 int (*builtin_func[])(char **) = {
     &rtsh_cd,
     &rtsh_help,
-    &rtsh_exit};
+    &rtsh_exit,
+    &rtsh_pwd};
 
 int rtsh_num_builtins()
 {
@@ -70,23 +72,29 @@ int rtsh_cd(char **args)
 
 int rtsh_help(char **args)
 {
-  int i;
-  printf("BVK Ratnesh's rtsh\n");
-  printf("Type program names and arguments, and hit enter.\n");
-  printf("The following are built in:\n");
-
-  for (i = 0; i < rtsh_num_builtins(); i++)
-  {
-    printf("  %s\n", builtin_str[i]);
-  }
-
-  printf("Use the man command for information on other programs.\n");
+  printf("BVK Ratnesh's rtsh - Custom Shell\n\n");
+  printf("Built-in Commands:\n");
+  printf("  cd [dir]   - Change the current directory\n");
+  printf("  help       - Show this help menu\n");
+  printf("  exit       - Exit the shell\n");
+  printf("  pwd        - Print current working directory\n");
+  printf("\nUse the 'man' command for other utilities.\n");
   return 1;
 }
 
 int rtsh_exit(char **args)
 {
   return 0;
+}
+
+int rtsh_pwd(char **args)
+{
+  char cwd[1024];
+  if (getcwd(cwd, sizeof(cwd)) != NULL)
+    printf("%s\n", cwd);
+  else
+    perror("rtsh");
+  return 1;
 }
 
 int rtsh_launch(char **args)
