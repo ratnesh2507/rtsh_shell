@@ -5,6 +5,71 @@
 #include <stdio.h>
 #include <string.h>
 
+/*
+  Function Declarations for builtin shell commands:
+ */
+int lsh_cd(char **args);
+int lsh_help(char **args);
+int lsh_exit(char **args);
+
+/*
+  List of builtin commands, followed by their corresponding functions.
+ */
+char *builtin_str[] = {
+    "cd",
+    "help",
+    "exit"};
+
+int (*builtin_func[])(char **) = {
+    &rtsh_cd,
+    &rtsh_help,
+    &rtsh_exit};
+
+int rtsh_num_builtins()
+{
+  return sizeof(builtin_str) / sizeof(char *);
+}
+
+/*
+  Builtin function implementations.
+*/
+int rtsh_cd(char **args)
+{
+  if (args[1] == NULL)
+  {
+    fprintf(stderr, "rtsh: expected argument to \"cd\"\n");
+  }
+  else
+  {
+    if (chdir(args[1]) != 0)
+    {
+      perror("rtsh");
+    }
+  }
+  return 1;
+}
+
+int rtsh_help(char **args)
+{
+  int i;
+  printf("BVK Ratnesh's rtsh\n");
+  printf("Type program names and arguments, and hit enter.\n");
+  printf("The following are built in:\n");
+
+  for (i = 0; i < rtsh_num_builtins(); i++)
+  {
+    printf("  %s\n", builtin_str[i]);
+  }
+
+  printf("Use the man command for information on other programs.\n");
+  return 1;
+}
+
+int rtsh_exit(char **args)
+{
+  return 0;
+}
+
 int rtsh_launch(char **args)
 {
   pid_t pid, wpid;
